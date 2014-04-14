@@ -9,5 +9,8 @@ complement_computation: complement_computation.cpp parse_cover.hpp
 cc_debug: complement_computation.cpp parse_cover.hpp
 	$(CC) $(CFLAGS) -O0 -DDEBUG complement_computation.cpp -o cc
 
+tautology: tautology_check.cpp
+	$(CC) $(CFLAGS) -O3 tautology_check.cpp -o tc
+
 clean:
 	rm -f tc cc
