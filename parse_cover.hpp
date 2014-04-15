@@ -33,6 +33,7 @@ cover_t parse_cover() {
         ret[cube][var] = ONE;
         break;
       case '_':
+      case '-':
         ret[cube][var] = DC; // Don't care
         break;
       default:
@@ -57,7 +58,7 @@ std::ostream& serialize_cover(std::ostream& out, const cover_t& cover) {
         out << '1';
         break;
       case DC:
-        out << '_';
+        out << '-';
         break;
       default:
         throw "Tried to serialize invalid cover";
