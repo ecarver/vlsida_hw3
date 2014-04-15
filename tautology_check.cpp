@@ -67,10 +67,14 @@ void freeCubeList(CubeList* myCubeList)
     for (int ivar = 0; ivar < myCubeList->numVars; ivar++) {
         free(myCubeList->vars[ivar]);
     }
+    free(myCubeList->vars);
 
     for (int icube = 0; icube < myCubeList->numCubes; icube++) {
         free(myCubeList->cubes[icube]);
     }
+    free(myCubeList->cubes);
+
+    free(myCubeList);
 }
 
 void updateVarInfo(CubeList *myCubeList) 
@@ -333,13 +337,14 @@ bool checkForTautology(CubeList *myCubeList)
         if(debug) printf("[UNKNOWN] splitting on variable[%i]\n", binateVar); 
 
         posCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, POS);
+        negCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, NEG);
+        
         if(debug) { 
             printf("Positive cofactor Cube List...\n");
             printCurrentCubeList(posCofacCubeList); 
         }
         posCofacTautology = checkForTautology(posCofacCubeList);
 
-        negCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, NEG);
         if(debug) { 
             printf("Negative cofactor cube list...\n");
             printCurrentCubeList(negCofacCubeList); 
