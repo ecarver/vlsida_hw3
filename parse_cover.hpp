@@ -23,24 +23,31 @@ cover_t parse_cover() {
   cover_t ret;
 
   for (int cube = 0; cube < num_cubes; cube++) {
-    std::string line;
-    std::getline(std::cin, line);
+    std::string line = "";
+    while ( line == "" ) {
+      std::getline(std::cin, line);
+    }
+    cube_t temp;
     for (int var = 0; var < num_vars; var++) {
       switch( line[var] ) {
       case '0':
-        ret[cube][var] = ZERO;
+        temp.push_back(ZERO);
         break;
       case '1':
-        ret[cube][var] = ONE;
+        temp.push_back(ONE);
         break;
       case '_':
       case '-':
-        ret[cube][var] = DC; // Don't care
+        temp.push_back(DC);
         break;
+      case '\n':
+      case '\r':
+        continue;
       default:
-        throw "Invalid character in cover";
+        throw "Invalid character in cover: " + line[var];
       }
     }
+    ret.push_back(temp);
   }
 
   return ret;
