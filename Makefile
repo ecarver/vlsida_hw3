@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Wextra -pedantic -std=c++0x
+CFLAGS = -g -Wall -Wextra -pedantic -std=c++0x
 
 default: complement_computation tautology
 
