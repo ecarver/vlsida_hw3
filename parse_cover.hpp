@@ -7,6 +7,7 @@
 #include <vector>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 enum input_type { ZERO, ONE, DC };
 
@@ -45,7 +46,8 @@ cover_t parse_cover() {
   return ret;
 }
 
-std::ostream& serialize_cover(std::ostream& out, const cover_t& cover) {
+std::string serialize_cover(const cover_t& cover) {
+  std::stringstream out;
   out << cover[0].size() << std::endl;
   out << cover.size() << std::endl;
   for (const cube_t& cube : cover) {
@@ -67,7 +69,7 @@ std::ostream& serialize_cover(std::ostream& out, const cover_t& cover) {
     out << std::endl;
   }
 
-  return out;
+  return out.str();
 }
 
 #endif
