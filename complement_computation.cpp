@@ -176,7 +176,31 @@ cover_t gen_complement(const cover_t& cover) {
   }
 
   // None of the termination conditions were satisfied; split the cover and recurse
-  
+  int unate_var = find_unate(cover);
+  unsigned int split_var = 0;
+  bool pos_unate = false;
+  bool neg_unate = false;
+  if ( unate_var >= 0 ) {
+    split_var = (unsigned int)unate_var;
+    switch ( cover[0][unate_var] ) {
+    case ONE:
+      pos_unate = true;
+      break;
+    case ZERO:
+      neg_unate = true;
+      break;
+    case DC:
+      pos_unate = true;
+      neg_unate = true;
+      break;
+    default:
+      throw "Invalid input_type when determining unateness";
+    }
+  }
+  std::pair<cover_t, cover_t> covers = split_cover(split_var, cover);
+  cover_t complement_x = gen_complement(covers.first);
+  cover_t complement_x_prime = gen_complement(covers.second);
+  return concatenate_cover(complement_x, complement_x_prime, split_var, pos_unate, neg_unate);
 }
 
 int main() {
@@ -187,6 +211,7 @@ int main() {
   }
   catch (char const * msg) {
     std::cerr << msg << std::endl;
+    return 1;
   }
   return 0;
 }
