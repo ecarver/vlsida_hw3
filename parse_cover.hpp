@@ -14,8 +14,7 @@ enum input_type { ZERO, ONE, DC };
 typedef std::vector<input_type> cube_t;
 typedef std::vector<cube_t> cover_t;
 
-cover_t parse_cover() {
-  int num_vars;
+cover_t parse_cover(unsigned int& num_vars) {
   std::cin >> num_vars;
   int num_cubes;
   std::cin >> num_cubes;
@@ -28,7 +27,7 @@ cover_t parse_cover() {
       std::getline(std::cin, line);
     }
     cube_t temp;
-    for (int var = 0; var < num_vars; var++) {
+    for (unsigned int var = 0; var < num_vars; var++) {
       switch( line[var] ) {
       case '0':
         temp.push_back(ZERO);
@@ -55,7 +54,12 @@ cover_t parse_cover() {
 
 std::string serialize_cover(const cover_t& cover) {
   std::stringstream out;
-  out << cover[0].size() << std::endl;
+  if ( cover.size() == 0 ) {
+    out << 0 << std::endl;
+  }
+  else {
+    out << cover[0].size() << std::endl;
+  }
   out << cover.size() << std::endl;
   for (const cube_t& cube : cover) {
     for (const input_type& var : cube) {
