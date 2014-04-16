@@ -12,6 +12,10 @@ static bool debug = false;
 //cube valid information index offsets
 static int cubeUniOff = 0;
 
+static int globNumVars = 0;
+
+static bool nontautLeaf = false;
+
 enum varVals {
     COMP = 0,
     TRUE, 
@@ -29,7 +33,7 @@ enum cofactors {
 };
 
 typedef struct {
-    int polarity;
+    unsigned char polarity;
     int numTrue;
     int numComp;
     int numDC;
@@ -41,9 +45,8 @@ typedef struct {
     int numVars;
     int numCubes;
     unsigned char **cubes;
-    BoolVar **vars;
-    bool unate;
-    bool containsUniCube;
+    unsigned char unate;
+    unsigned char containsUniCube;
 } CubeList;
 
 void printCurrentCubeList(CubeList *myCubeList)
@@ -64,11 +67,6 @@ void printCurrentCubeList(CubeList *myCubeList)
 
 void freeCubeList(CubeList* myCubeList)
 {
-    for (int ivar = 0; ivar < myCubeList->numVars; ivar++) {
-        free(myCubeList->vars[ivar]);
-    }
-    free(myCubeList->vars);
-
     for (int icube = 0; icube < myCubeList->numCubes; icube++) {
         free(myCubeList->cubes[icube]);
     }
@@ -77,62 +75,79 @@ void freeCubeList(CubeList* myCubeList)
     free(myCubeList);
 }
 
-void updateVarInfo(CubeList *myCubeList) 
+void freeVars(BoolVar **myVars) 
 {
-//    if(debug) printf("updating variable info for current cube list\n");
+    for (int ivar = 0; ivar < globNumVars; ivar++) {
+        free(myVars[ivar]);
+    }
+    free(myVars);
+}
 
-    //clear previous var info
-    for (int i = 0; i < myCubeList->numVars; i++) {
-        myCubeList->vars[i]->numTrue = 0;
-        myCubeList->vars[i]->numComp = 0;
-        myCubeList->vars[i]->numDC = 0;
-        myCubeList->vars[i]->dependence = 0;
-        myCubeList->vars[i]->balance = 0;
+BoolVar **getVarInfo(CubeList *myCubeList) 
+{
+    BoolVar **myVars = NULL;
+
+    if ((myVars = (BoolVar**)malloc(myCubeList->numVars*sizeof(BoolVar*))) == NULL) {
+        printf("ERROR: MALLOC FAILED!\n");
+        exit(1);
+    }
+    for (int ivar = 0; ivar < myCubeList->numVars; ivar++) {
+        if ((myVars[ivar] = (BoolVar*)malloc(myCubeList->numVars*sizeof(BoolVar))) == NULL) {
+            printf("ERROR: MALLOC FAILED!\n");
+            exit(1);
+        }
+
+        myVars[ivar]->polarity = 0;
+        myVars[ivar]->numTrue = 0;
+        myVars[ivar]->numComp = 0 ;
+        myVars[ivar]->numDC = 0;
+        myVars[ivar]->dependence = 0; 
+        myVars[ivar]->balance = 0;
     }
 
     //parse var colums of cube matrix to populate boolvar info
     for (int ivar = 0; ivar < myCubeList->numVars; ivar++) {
-        for (int icube = 0; icube < myCubeList->numCubes; icube++) {
-//            if(debug) printf("boolvar[%i] in cube[%i] = %i\n", ivar, icube, myCubeList->cubes[icube][ivar]);
 
+        for (int icube = 0; icube < myCubeList->numCubes; icube++) {
             if (myCubeList->cubes[icube][ivar] == TRUE) { 
-                myCubeList->vars[ivar]->numTrue++;
-                myCubeList->vars[ivar]->dependence++;
+                myVars[ivar]->numTrue++;
+                myVars[ivar]->dependence++;
             } else if (myCubeList->cubes[icube][ivar] == COMP) {
-                myCubeList->vars[ivar]->numComp++;
-                myCubeList->vars[ivar]->dependence++;
+                myVars[ivar]->numComp++;
+                myVars[ivar]->dependence++;
             } else {
-                myCubeList->vars[ivar]->numDC++;
+                myVars[ivar]->numDC++;
             }
         }
 
         //determine whether or not var is single polarity 
-        if ( (myCubeList->vars[ivar]->numTrue > 0 && myCubeList->vars[ivar]->numComp == 0) ||
-             (myCubeList->vars[ivar]->numComp > 0 && myCubeList->vars[ivar]->numTrue == 0) ||
-             (myCubeList->vars[ivar]->numDC == myCubeList->numCubes) )
+        if ( (myVars[ivar]->numTrue > 0 && myVars[ivar]->numComp == 0) ||
+             (myVars[ivar]->numComp > 0 && myVars[ivar]->numTrue == 0) ||
+             (myVars[ivar]->numDC == myCubeList->numCubes) )
 
         { 
-            myCubeList->vars[ivar]->polarity = SINGLE;
-            myCubeList->vars[ivar]->balance = -1;
+            myVars[ivar]->polarity = SINGLE;
+            myVars[ivar]->balance = -1;
         } else {
-            myCubeList->vars[ivar]->polarity = DOUBLE;
-            myCubeList->vars[ivar]->balance = abs(myCubeList->vars[ivar]->numTrue - myCubeList->vars[ivar]->numComp);
+            myVars[ivar]->polarity = DOUBLE;
+            myVars[ivar]->balance = abs(myVars[ivar]->numTrue - myVars[ivar]->numComp);
         }
     }
+
+    return myVars;
 }
 
-void checkForUnateCubeList(CubeList *myCubeList)
+bool isCubeListUnate(BoolVar **myVars)
 {
-    for (int ivar = 0; ivar < myCubeList->numVars; ivar++) {
-        if (myCubeList->vars[ivar]->polarity == DOUBLE) {
-            myCubeList->unate = false;
-            return;
+    for (int ivar = 0; ivar < globNumVars; ivar++) {
+        if (myVars[ivar]->polarity == DOUBLE) {
+            return false;
         }
     }
 
-    myCubeList->unate = true;
-
     if(debug) printf("\tcube list is unate\n");
+
+    return true;
 }
 
 CubeList *updateCofactorCubeList(CubeList *myCubeList, int varInd, int cofactor)
@@ -153,20 +168,6 @@ CubeList *updateCofactorCubeList(CubeList *myCubeList, int varInd, int cofactor)
     }
     subCubeList->numVars = myCubeList->numVars;
     subCubeList->containsUniCube = false;
-
-    if ((subCubeList->vars = (BoolVar**)malloc(myCubeList->numVars*sizeof(BoolVar*))) == NULL) {
-        printf("CALLOC ERROR!\n");
-        exit(1);
-    }
-    //copy vars array without the current cofactor variable
-    for (int i = 0; i < myCubeList->numVars; i++) {
-        if ((subCubeList->vars[i] = (BoolVar*)malloc(sizeof(BoolVar))) == NULL) {
-            printf("CALLOC ERROR!\n");
-            exit(1);
-        }
-
-        memcpy(subCubeList->vars[i], myCubeList->vars[i], sizeof(BoolVar));
-    }
 
     if ((subCubeList->cubes = (unsigned char**)malloc(myCubeList->numCubes*sizeof(unsigned char*))) == NULL) {
         printf("CALLOC ERROR!\n");
@@ -218,25 +219,27 @@ CubeList *updateCofactorCubeList(CubeList *myCubeList, int varInd, int cofactor)
     
     subCubeList->numCubes = subListCubeCount;
 
-    updateVarInfo(subCubeList);
+    BoolVar **myVars = getVarInfo(subCubeList);
 
-    checkForUnateCubeList(subCubeList);
+    subCubeList->unate = isCubeListUnate(myVars);
+
+    freeVars(myVars);
 
     return subCubeList;
 }
 
-int getMostBinateVar(CubeList *myCubeList)
+int getMostBinateVar(BoolVar** myVars)
 {
     int ind = 0;
     int maxDep = 0;
     bool tie = false;
     std::vector<int> tieVars;
 
-    for (int ivar = 0; ivar < myCubeList->numVars; ivar++) {
-        if (myCubeList->vars[ivar]->dependence > maxDep) {
-            maxDep = myCubeList->vars[ivar]->dependence;
+    for (int ivar = 0; ivar < globNumVars; ivar++) {
+        if (myVars[ivar]->dependence > maxDep) {
+            maxDep = myVars[ivar]->dependence;
             ind = ivar;
-        } else if (myCubeList->vars[ivar]->dependence == maxDep && maxDep > 0) {
+        } else if (myVars[ivar]->dependence == maxDep && maxDep > 0) {
             tie = true;
             tieVars.push_back(ivar);
         }
@@ -246,8 +249,9 @@ int getMostBinateVar(CubeList *myCubeList)
         int minBal = 100;
 
         for (int ivar = 0; ivar < int(tieVars.size()); ivar++) {
-            if (myCubeList->vars[ivar]->balance < minBal) {
-                minBal = myCubeList->vars[ivar]->balance;
+
+            if (myVars[ivar]->balance < minBal) {
+                minBal = myVars[ivar]->balance;
                 ind = tieVars[ivar]; 
             }
         }
@@ -315,6 +319,8 @@ bool checkForTautology(CubeList *myCubeList)
             if(debug) {
                 printf("[NOT TAUTOLOGY] Current cubelist is missing universal cube!\n");
             }
+
+            nontautLeaf = true;
                 
             taut = false;
         }
@@ -333,23 +339,32 @@ bool checkForTautology(CubeList *myCubeList)
         bool posCofacTautology = false;
         bool negCofacTautology = false;
 
-        binateVar = getMostBinateVar(myCubeList);
+        BoolVar **myVars = getVarInfo(myCubeList);
+
+        binateVar = getMostBinateVar(myVars);
+        freeVars(myVars);
         if(debug) printf("[UNKNOWN] splitting on variable[%i]\n", binateVar); 
 
         posCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, POS);
         negCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, NEG);
-        
+
+        if (myCubeList) {
+            freeCubeList(myCubeList);
+        }
+
         if(debug) { 
             printf("Positive cofactor Cube List...\n");
             printCurrentCubeList(posCofacCubeList); 
         }
         posCofacTautology = checkForTautology(posCofacCubeList);
+        if (nontautLeaf) { return false; }
 
         if(debug) { 
             printf("Negative cofactor cube list...\n");
             printCurrentCubeList(negCofacCubeList); 
         }
         negCofacTautology = checkForTautology(negCofacCubeList);
+        if (nontautLeaf) { return false; }
 
         taut = posCofacTautology && negCofacTautology;
     }
@@ -361,7 +376,7 @@ int main(int argc, char* argv[])
 {
     time_t t0 = time(NULL);
     int cubeCount = 0;
-    int numVars, numCubes = 0;
+    int numCubes = 0;
     char *cubeStr = NULL;
     CubeList *myCubeList = NULL;
 
@@ -372,39 +387,21 @@ int main(int argc, char* argv[])
         debug = true;
     }
 
-    std::cin >> numVars;
+    std::cin >> globNumVars;
     std::cin >> numCubes;
 
     //update cube info array index offsets
-    cubeUniOff = numVars;
+    cubeUniOff = globNumVars;
 
     if ((myCubeList = (CubeList*)malloc(sizeof(CubeList))) == NULL) {
         printf("MALLOC ERROR!\n");
         exit(1);
     }
-    myCubeList->numVars = numVars;
+    myCubeList->numVars = globNumVars;
     myCubeList->numCubes = numCubes;
     myCubeList->containsUniCube = false;
 
-    if ((myCubeList->vars = (BoolVar**)malloc(numVars*sizeof(BoolVar*))) == NULL) {
-        printf("CALLOC ERROR!\n");
-        exit(1);
-    }
-    for (int i = 0; i < numVars; i++) {
-        if ((myCubeList->vars[i] = (BoolVar*)malloc(sizeof(BoolVar))) == NULL) {
-            printf("CALLOC ERROR!\n");
-            exit(1);
-        }
-
-        myCubeList->vars[i]->numTrue = 0;
-        myCubeList->vars[i]->numComp = 0;
-        myCubeList->vars[i]->numDC = 0;
-        myCubeList->vars[i]->dependence = 0;
-        myCubeList->vars[i]->balance = 0;
-    }
-
-
-    if ((cubeStr = (char *)malloc((numVars+1)*sizeof(char))) == NULL) {
+    if ((cubeStr = (char *)malloc((globNumVars+1)*sizeof(char))) == NULL) {
         printf("CALLOC ERROR!\n");
         exit(1);
     }
@@ -414,7 +411,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
     for (int i = 0; i < numCubes; i++) {
-        if ((myCubeList->cubes[i] = (unsigned char*)calloc(numVars + 1, sizeof(unsigned char))) == NULL) {
+        if ((myCubeList->cubes[i] = (unsigned char*)calloc(globNumVars + 1, sizeof(unsigned char))) == NULL) {
             printf("CALLOC ERROR!\n");
             exit(1);
         }
@@ -427,7 +424,7 @@ int main(int argc, char* argv[])
         if(debug) printf("input cube string: %s\n", cubeStr);
 
         //parse cubes and populate cube arrays
-        for (int ivar = 0; ivar < numVars; ivar++) {
+        for (int ivar = 0; ivar < globNumVars; ivar++) {
             if (cubeStr[ivar] == '0') {
                 myCubeList->cubes[cubeCount][ivar] = COMP;
             } else if (cubeStr[ivar] == '1') {
@@ -442,7 +439,7 @@ int main(int argc, char* argv[])
 
         }
 
-        if (myCubeList->cubes[cubeCount][cubeUniOff] == numVars) {
+        if (myCubeList->cubes[cubeCount][cubeUniOff] == globNumVars) {
             printf("COVER IS A TAUTOLOGY\n");
             //TODO: write tautology cover file
             return 0;
@@ -453,12 +450,10 @@ int main(int argc, char* argv[])
 
     free(cubeStr);
 
-    updateVarInfo(myCubeList);
-
     if (debug) {
         for (int icubes = 0; icubes < numCubes; icubes++) {
             printf("cube[%i]: ", icubes);
-            for (int ivars = 0; ivars < numVars; ivars++) {
+            for (int ivars = 0; ivars < globNumVars; ivars++) {
                 if (myCubeList->cubes[icubes][ivars] == DC) {
                     printf("-");
                 } else {
@@ -468,22 +463,24 @@ int main(int argc, char* argv[])
             printf("\n");
         }
 
-        for (int ivar = 0; ivar < numVars; ivar++) {
-            printf("boolvar[%i]\n", ivar);
-            if (myCubeList->vars[ivar]->polarity == SINGLE) {
-                printf("\tpolarity = single\n");
-            } else {
-                printf("\tpolarity = double\n");
-            }
-            printf("\tnumTrue = %i\n", myCubeList->vars[ivar]->numTrue);
-            printf("\tnumComp = %i\n", myCubeList->vars[ivar]->numComp);
-            printf("\tnumDC = %i\n", myCubeList->vars[ivar]->numDC);
-            printf("\tdependence = %i\n", myCubeList->vars[ivar]->dependence);
-            printf("\tbalance = %i\n", myCubeList->vars[ivar]->balance);
-        }
+//        for (int ivar = 0; ivar < globNumVars; ivar++) {
+//            printf("boolvar[%i]\n", ivar);
+//            if (myCubeList->vars[ivar]->polarity == SINGLE) {
+//                printf("\tpolarity = single\n");
+//            } else {
+//                printf("\tpolarity = double\n");
+//            }
+//            printf("\tnumTrue = %i\n", myCubeList->vars[ivar]->numTrue);
+//            printf("\tnumComp = %i\n", myCubeList->vars[ivar]->numComp);
+//            printf("\tnumDC = %i\n", myCubeList->vars[ivar]->numDC);
+//            printf("\tdependence = %i\n", myCubeList->vars[ivar]->dependence);
+//            printf("\tbalance = %i\n", myCubeList->vars[ivar]->balance);
+//        }
     }
 
-    checkForUnateCubeList(myCubeList);
+    BoolVar **myVars = getVarInfo(myCubeList);
+    myCubeList->unate = isCubeListUnate(myVars);
+    freeVars(myVars); 
 
     if(debug) {
         printf("Initial cube list...\n");
@@ -496,6 +493,7 @@ int main(int argc, char* argv[])
         printf("COVER IS NOT A TAUTOLOGY\n");
     }
 
+//    freeCubeList(myCubeList);
 
     time_t tf = time(NULL);
     printf("Run time: %i hour(s), %i min(s), %i (secs)\n",
