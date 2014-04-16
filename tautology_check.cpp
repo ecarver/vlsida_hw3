@@ -488,12 +488,16 @@ int main(int argc, char* argv[])
     }
 
     if (checkForTautology(myCubeList)) {
-        printf("COVER IS A TAUTOLOGY\n");
+        printf("%i\n", globNumVars);
+        printf("1\n");
+        for (int i = 0; i < globNumVars; i++) {
+            printf("-");
+        }
+        printf("\n");
     } else { 
-        printf("COVER IS NOT A TAUTOLOGY\n");
+        printf("%i\n", globNumVars);
+        printf("0\n");
     }
-
-//    freeCubeList(myCubeList);
 
     time_t tf = time(NULL);
     printf("Run time: %i hour(s), %i min(s), %i (secs)\n",
