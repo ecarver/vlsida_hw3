@@ -339,11 +339,21 @@ bool checkForTautology(CubeList *myCubeList)
         bool posCofacTautology = false;
         bool negCofacTautology = false;
 
+        bool posBranchFirst = true; 
+
         BoolVar **myVars = getVarInfo(myCubeList);
 
         binateVar = getMostBinateVar(myVars);
-        freeVars(myVars);
         if(debug) printf("[UNKNOWN] splitting on variable[%i]\n", binateVar); 
+
+        //determine which branch to inspect first
+        //if binate var has more 1's than 0's, inspect negative branch first
+        //otherwist, inspect positive branch first
+        if (myVars[binateVar]->numTrue > myVars[binateVar]->numComp) {
+            posBranchFirst = false;
+        }
+
+        freeVars(myVars);
 
         posCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, POS);
         negCofacCubeList = updateCofactorCubeList(myCubeList, binateVar, NEG);
@@ -352,19 +362,37 @@ bool checkForTautology(CubeList *myCubeList)
             freeCubeList(myCubeList);
         }
 
-        if(debug) { 
-            printf("Positive cofactor Cube List...\n");
-            printCurrentCubeList(posCofacCubeList); 
-        }
-        posCofacTautology = checkForTautology(posCofacCubeList);
-        if (nontautLeaf) { return false; }
+        if (posBranchFirst) {
+            //check positive cofactor branch first
+            if(debug) { 
+                printf("Positive cofactor Cube List...\n");
+                printCurrentCubeList(posCofacCubeList); 
+            }
+            posCofacTautology = checkForTautology(posCofacCubeList);
+            if (nontautLeaf) { return false; }
 
-        if(debug) { 
-            printf("Negative cofactor cube list...\n");
-            printCurrentCubeList(negCofacCubeList); 
+            if(debug) { 
+                printf("Negative cofactor cube list...\n");
+                printCurrentCubeList(negCofacCubeList); 
+            }
+            negCofacTautology = checkForTautology(negCofacCubeList);
+            if (nontautLeaf) { return false; }
+        } else {
+            //check negative cofactor branch first
+            if(debug) { 
+                printf("Negative cofactor cube list...\n");
+                printCurrentCubeList(negCofacCubeList); 
+            }
+            negCofacTautology = checkForTautology(negCofacCubeList);
+            if (nontautLeaf) { return false; }
+            
+            if(debug) { 
+                printf("Positive cofactor Cube List...\n");
+                printCurrentCubeList(posCofacCubeList); 
+            }
+            posCofacTautology = checkForTautology(posCofacCubeList);
+            if (nontautLeaf) { return false; }
         }
-        negCofacTautology = checkForTautology(negCofacCubeList);
-        if (nontautLeaf) { return false; }
 
         taut = posCofacTautology && negCofacTautology;
     }
