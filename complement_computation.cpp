@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <utility>
+#include <cstdlib>
 
 #include "parse_cover.hpp"
 
@@ -46,37 +47,6 @@ inline bool valid_split_index(const unsigned int& index, const cover_t& cover) {
 cover_t concatenate_cover(cover_t& complement_x, cover_t& complement_x_prime,
                           const unsigned int variable_num, const bool positive_unate,
                           const bool negative_unate) {
-  // if ( positive_unate && negative_unate ) {
-  //   throw "Variable specified as both positive and negative unate";
-  // }
-  // int largest;
-  // if ( complement_x_prime.empty() && complement_x.empty() ) {
-  //   largest = 0;
-  // }
-  // else if ( complement_x_prime.empty() ) {
-  //   largest = (int)complement_x[0].size();
-  // }
-  // else if ( complement_x.empty() ) {
-  //   largest = (int)complement_x_prime[0].size();
-  // }
-  // else if ( complement_x_prime[0].size() > complement_x[0].size() ) {
-  //   largest = (int)complement_x_prime[0].size();
-  // }
-  // else {
-  //   largest = (int)complement_x[0].size();
-  // }
-  // if ( complement_x_prime.size() == 1 && complement_x_prime[0].size() == 1
-  //      && complement_x_prime[0][0] == DC ) {
-  //   for (int i = 0; i < largest-1; i++) {
-  //     complement_x_prime[0].push_back(DC);
-  //   }
-  // }
-  // if ( complement_x.size() == 1 && complement_x[0].size() == 1
-  //      && complement_x[0][0] == DC ) {
-  //   for (int i = 0; i < largest-1; i++) {
-  //     complement_x[0].push_back(DC);
-  //   }
-  // }
   cover_t ret;
   for (const cube_t& cube : complement_x) {
     cube_t temp;
@@ -135,7 +105,7 @@ int find_unate(const cover_t& cover) {
 }
 
 // Recursive method to generate complement of an arbitrary cover
-cover_t gen_complement(const cover_t& cover, bool* const split_vars, const unsigned int& num_vars) {
+cover_t gen_complement(const cover_t& cover, const unsigned int& num_vars) {
   // Check termination conditions
   // Condition 1: The cover is empty
   if ( cover.size() == 0 ) {
@@ -237,11 +207,6 @@ cover_t gen_complement(const cover_t& cover, bool* const split_vars, const unsig
   // None of the termination conditions were satisfied; split the cover and recurse
   int unate_var = find_unate(cover);
   unsigned int split_var = 0;
-  // for (; split_vars[split_var]; split_var++) {
-  //   if ( split_var >= num_vars ) {
-  //     throw "Ran out of splitting variables";
-  //   }
-  // }
   while ( !valid_split_index(split_var, cover) ) {
     ++split_var;
   }
@@ -264,37 +229,19 @@ cover_t gen_complement(const cover_t& cover, bool* const split_vars, const unsig
       throw "Invalid input_type when determining unateness";
     }
   }
-  split_vars[split_var] = true;
   std::pair<cover_t, cover_t> covers = split_cover(split_var, cover);
-  cover_t complement_x = gen_complement(covers.first, split_vars, num_vars);
-  cover_t complement_x_prime = gen_complement(covers.second, split_vars, num_vars);
-  // if ( complement_x_prime.size() == 1 && complement_x_prime[0].size() == 1
-  //      && complement_x_prime[0][0] == DC ) {
-  //   for (unsigned int i = 0; i < complement_x.size()-1; i++) {
-  //     complement_x_prime[0].push_back(DC);
-  //   }
-  // }
-  // if ( complement_x.size() == 1 && complement_x[0].size() == 1
-  //      && complement_x[0][0] == DC ) {
-  //   for (unsigned int i = 0; i < complement_x_prime.size()-1; i++) {
-  //     complement_x[0].push_back(DC);
-  //   }
-  // }
+  cover_t complement_x = gen_complement(covers.first, num_vars);
+  cover_t complement_x_prime = gen_complement(covers.second, num_vars);
 
   return concatenate_cover(complement_x, complement_x_prime, split_var, pos_unate, neg_unate);
 }
 
 int main() {
   unsigned int num_vars;
-  cover_t cover = parse_cover(num_vars);
-  bool* split_vars = new bool[num_vars];
-  cover_t complement = gen_complement(cover, split_vars, num_vars);
-  delete[] split_vars;
+  cover_t cover;
+  cover = parse_cover(num_vars);
+  cover_t complement = gen_complement(cover, num_vars);
   std::cout << serialize_cover(complement);
-  // }
-  // catch (char const * msg) {
-  //   std::cerr << msg << std::endl;
-  //   return 1;
-  // }
+
   return 0;
 }
