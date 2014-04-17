@@ -35,7 +35,7 @@ std::pair<cover_t, cover_t> split_cover(const unsigned int var, const cover_t& c
 
 // Returns false if the variable is don't care for all cubes
 // Otherwise, returns true
-inline bool valid_split_index(const unsigned int& index, const cover_t& cover) {
+inline bool valid_split_index(const cover_t& cover, const unsigned int& index) {
   for (const cube_t& cube : cover) {
     if ( cube[index] != DC ) {
       return true;
@@ -85,23 +85,32 @@ cover_t concatenate_cover(cover_t& complement_x, cover_t& complement_x_prime,
   return ret;
 }
 
-// Returns the index of the first unate variable it finds
-// If no variables are unate, returns -1
-int find_unate(const cover_t& cover) {
-  for (unsigned int var_num = 0; var_num < cover[0].size(); var_num++) {
-    input_type first_value = cover[0][var_num];
-    bool is_unate = true;
-    for (const cube_t& cube : cover) {
-      if ( cube[var_num] != first_value || cube[var_num] == DC ) {
-        is_unate = false;
-        break;
-      }
-    }
-    if ( is_unate ) {
-      return var_num;
+inline bool pos_unate(const cover_t& cover, const int var_num) {
+  for (const cube_t& cube : cover) {
+    if ( cube[var_num] == ZERO ) {
+      return false;
     }
   }
-  return -1;
+  return true;
+}
+
+inline bool neg_unate(const cover_t& cover, const int var_num) {
+  for (const cube_t& cube : cover) {
+    if ( cube[var_num] == ONE ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+unsigned int find_split_var(const cover_t& cover, bool& positive_unate, bool& negative_unate) {
+  unsigned int var = 0;
+  while ( !valid_split_index(cover, var) ) {
+    var++;
+  }
+  positive_unate = pos_unate(cover, var);
+  negative_unate = neg_unate(cover, var);
+  return var;
 }
 
 // Recursive method to generate complement of an arbitrary cover
@@ -164,71 +173,49 @@ cover_t gen_complement(const cover_t& cover, const unsigned int& num_vars) {
   }
 
   // Condition 4: The cover is single-input dependent and not unate, and is therefore a tautology
-  if ( find_unate(cover) == -1 ) {
-    bool found_column = false;
-    bool condition_four_possible = true;
-    for (unsigned int var_num = 0; var_num < cover[0].size(); var_num++) {
-      bool found_one = false;
-      bool found_zero = false;
-      bool found_dc = false;
-      for (const cube_t& cube : cover) {
-        switch ( cube[var_num] ) {
-        case ZERO:
-          found_zero = true;
-          break;
-        case ONE:
-          found_one = true;
-          break;
-        case DC:
-          found_dc = true;
-          break;
-        default:
-          throw "Invalid input_type when checking for single-input dependence";
-        }
-      }
-      if ( found_one && found_zero && !found_dc && !found_column ) {
-        found_column = true;
-      }
-      else if ( !found_one && !found_zero ) {
-        continue;
-      }
-      else {
-        condition_four_possible = false;
+  bool found_column = false;
+  bool condition_four_possible = true;
+  for (unsigned int var_num = 0; var_num < cover[0].size(); var_num++) {
+    bool found_one = false;
+    bool found_zero = false;
+    bool found_dc = false;
+    for (const cube_t& cube : cover) {
+      switch ( cube[var_num] ) {
+      case ZERO:
+        found_zero = true;
         break;
+      case ONE:
+        found_one = true;
+        break;
+      case DC:
+        found_dc = true;
+        break;
+      default:
+        throw "Invalid input_type when checking for single-input dependence";
       }
     }
-    if ( condition_four_possible && found_column ) {
-      // Condition 4 is met. Return an empty cube
-      cover_t ret;
-      return ret;
+    if ( found_one && found_zero && !found_dc && !found_column ) {
+      found_column = true;
     }
+    else if ( !found_one && !found_zero ) {
+      continue;
+    }
+    else {
+      condition_four_possible = false;
+      break;
+    }
+  }
+  if ( condition_four_possible && found_column ) {
+    // Condition 4 is met. Return an empty cube
+    cover_t ret;
+    return ret;
   }
 
   // None of the termination conditions were satisfied; split the cover and recurse
-  int unate_var = find_unate(cover);
-  unsigned int split_var = 0;
-  while ( !valid_split_index(split_var, cover) ) {
-    ++split_var;
-  }
+  
   bool pos_unate = false;
   bool neg_unate = false;
-  if ( unate_var >= 0 && valid_split_index(unate_var, cover) ) {
-    split_var = (unsigned int)unate_var;
-    switch ( cover[0][unate_var] ) {
-    case ONE:
-      pos_unate = true;
-      break;
-    case ZERO:
-      neg_unate = true;
-      break;
-    case DC:
-      pos_unate = true;
-      neg_unate = true;
-      break;
-    default:
-      throw "Invalid input_type when determining unateness";
-    }
-  }
+  unsigned int split_var = find_split_var(cover, pos_unate, neg_unate);
   std::pair<cover_t, cover_t> covers = split_cover(split_var, cover);
   cover_t complement_x = gen_complement(covers.first, num_vars);
   cover_t complement_x_prime = gen_complement(covers.second, num_vars);
