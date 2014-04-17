@@ -468,8 +468,13 @@ int main(int argc, char* argv[])
         }
 
         if (myCubeList->cubes[cubeCount][cubeUniOff] == globNumVars) {
-            printf("COVER IS A TAUTOLOGY\n");
             //TODO: write tautology cover file
+            printf("%i\n", globNumVars);
+            printf("1\n");
+            for (int i = 0; i < globNumVars; i++) {
+                printf("-");
+            }
+            printf("\n");
             return 0;
         }
 
