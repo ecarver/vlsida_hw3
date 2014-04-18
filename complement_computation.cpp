@@ -44,6 +44,29 @@ inline bool valid_split_index(const cover_t& cover, const unsigned int& index) {
   return false;
 }
 
+// This function will combine two cubes that have only one variable different
+inline cube_t absorb_cubes(const cube_t& first, const cube_t& second) {
+  cube_t dummy;
+  cube_t ret;
+  if ( first.size() != second.size() ) {
+    return dummy;
+  }
+  bool found_difference = false;
+  for (unsigned int i = 0; i < first.size(); i++) {
+    if ( first[i] == second[i] ) {
+      ret.push_back(first[i]);
+    }
+    else if ( !found_difference ) {
+      found_difference = true;
+      ret.push_back(DC);
+    }
+    else {
+      return dummy;
+    }
+  }
+  return ret;
+}
+
 cover_t concatenate_cover(cover_t& complement_x, cover_t& complement_x_prime,
                           const unsigned int variable_num, const bool positive_unate,
                           const bool negative_unate) {
@@ -63,7 +86,19 @@ cover_t concatenate_cover(cover_t& complement_x, cover_t& complement_x_prime,
         temp.push_back(cube[i]);
       }
     }
-    ret.push_back(temp);
+    bool merged = false;
+    cube_t absorbed;
+    for (unsigned int i = 0; i < ret.size(); i++) {
+      absorbed = absorb_cubes(ret[i], temp);
+      if ( absorbed.size() ) {
+        merged = true;
+        ret[i] = absorbed;
+        break;
+      }
+    }
+    if ( !merged ) {
+      ret.push_back(temp);
+    }
   }
   for (const cube_t& cube : complement_x_prime) {
     cube_t temp;
@@ -80,7 +115,19 @@ cover_t concatenate_cover(cover_t& complement_x, cover_t& complement_x_prime,
         temp.push_back(cube[i]);
       }
     }
-    ret.push_back(temp);
+    bool merged = false;
+    cube_t absorbed;
+    for (unsigned int i = 0; i < ret.size(); i++) {
+      absorbed = absorb_cubes(ret[i], temp);
+      if ( absorbed.size() ) {
+        merged = true;
+        ret[i] = absorbed;
+        break;
+      }
+    }
+    if ( !merged ) {
+      ret.push_back(temp);
+    }
   }
   return ret;
 }
