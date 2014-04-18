@@ -275,7 +275,7 @@ int main() {
   cover_t cover;
   cover = parse_cover(num_vars);
   cover_t complement = gen_complement(cover, num_vars);
-  std::cout << serialize_cover(complement);
+  std::cout << serialize_cover(complement, num_vars);
 
   return 0;
 }

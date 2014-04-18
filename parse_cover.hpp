@@ -52,10 +52,10 @@ cover_t parse_cover(unsigned int& num_vars) {
   return ret;
 }
 
-std::string serialize_cover(const cover_t& cover) {
+std::string serialize_cover(const cover_t& cover, const int num_vars) {
   std::stringstream out;
   if ( cover.size() == 0 ) {
-    out << 0 << std::endl;
+    out << num_vars << std::endl;
   }
   else {
     out << cover[0].size() << std::endl;
