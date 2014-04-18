@@ -14,7 +14,13 @@ for f in ./covers/*.txt; do
     num_vars=`sed -n '1p' $f`;
     num_cubes_bm=`sed -n '2p' $f`;
     num_cubes_cc=`sed -n '2p' /tmp/ccf`;
-    num_cubes=$(( $num_cubes_bm + $num_cubes_cc ));
+    if [ -z "$num_cubes_cc" ] 
+    then
+        echo "Original cover is already tautology";
+        exit;
+    else 
+        num_cubes=$(( $num_cubes_bm + $num_cubes_cc ));
+    fi
     echo "Union cube count: $num_cubes";
     echo $num_vars > /tmp/catf;
     echo $num_cubes >> /tmp/catf;
