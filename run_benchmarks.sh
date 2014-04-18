@@ -1,6 +1,6 @@
 #!/bin/bash
 make
-for f in ./test/*.txt; do
+for f in ./covers/*.txt; do
     echo "Running benchmark $f";
     #echo "Tautology check:";
     #/usr/bin/time -v ./tc < $f 2> /tmp/ts;
