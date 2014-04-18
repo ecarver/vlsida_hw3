@@ -23,10 +23,10 @@ std::pair<cover_t, cover_t> split_cover(const unsigned int var, const cover_t& c
         split_cube.push_back(DC);
       }
     }
-    if ( cube[var] == ZERO ) {
+    if ( cube[var] == ZERO || cube[var] == DC) {
       complement_x_prime.push_back(split_cube);
     }
-    else {
+    if ( cube[var] == ONE || cube[var] == DC) {
       complement_x.push_back(split_cube);
     }
   }
