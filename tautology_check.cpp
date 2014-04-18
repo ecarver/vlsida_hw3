@@ -152,7 +152,6 @@ bool isCubeListUnate(BoolVar **myVars)
 
 CubeList *updateCofactorCubeList(CubeList *myCubeList, int varInd, int cofactor)
 {
-    bool updateDC = false;
     CubeList *subCubeList = NULL;
     int subListCubeCount = 0;
 
@@ -175,8 +174,6 @@ CubeList *updateCofactorCubeList(CubeList *myCubeList, int varInd, int cofactor)
     }
 
     for (int icube = 0; icube < myCubeList->numCubes; icube++) {
-        updateDC = false;
-
         if ( (cofactor == POS && myCubeList->cubes[icube][varInd] == COMP) ||
              (cofactor == NEG && myCubeList->cubes[icube][varInd] == TRUE) )
         { 
@@ -201,17 +198,13 @@ CubeList *updateCofactorCubeList(CubeList *myCubeList, int varInd, int cofactor)
             subCubeList->cubes[subListCubeCount][varInd] = DC;
             subCubeList->cubes[subListCubeCount][cubeUniOff]++;
             
-            updateDC = true;
-
             if(debug) printf("\tchanging var[%i] in cube[%i] to don't care\n", varInd, icube);
         }
 
 
         //see if universal cube is now present
-        if (updateDC) {
-            if (subCubeList->cubes[subListCubeCount][cubeUniOff] == subCubeList->numVars) {
-                subCubeList->containsUniCube = true;
-            }
+        if (subCubeList->cubes[subListCubeCount][cubeUniOff] == subCubeList->numVars) {
+            subCubeList->containsUniCube = true;
         }
 
         subListCubeCount++;
